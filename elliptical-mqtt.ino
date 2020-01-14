@@ -4,20 +4,12 @@
 #include "driver/spi_slave.h"
 #include <SPI.h>
 
-
 #include <PubSubClient.h>
 
-/*
-  Blink
-  Turns on an LED on for one second, then off for one second, repeatedly.
- 
-  This example code is in the public domain.
- */
- 
-// Pin 13 has an LED connected on most Arduino boards.
-// Pin 11 has the LED on Teensy 2.0
-// Pin 6  has the LED on Teensy++ 2.0
-// Pin 13 has the LED on Teensy 3.0
+const char hexstring[] = "0123456789ABCDEF";
+#define HEXBUFLEN 41
+char hexstringbuff[HEXBUFLEN];
+
 // give it a name:
 int led = 2;
 
@@ -50,6 +42,10 @@ char last[4] = "Off";
 WiFiClient espClient;
 PubSubClient client(espClient);
 
+void clrhexstringbuff() {
+  for (uint8_t i=0; i<HEXBUFLEN; i++) hexstringbuff[i] = 0;
+}
+
 void setup()
 {
   Serial.begin(115200);
@@ -80,6 +76,8 @@ void setup()
   // initialize the digital pin as an output.
   pinMode(led, OUTPUT);
   pinMode(0, INPUT);
+
+  clrhexstringbuff();
 
   SPI.begin();
   gpio_set_pull_mode((gpio_num_t)SCLK, GPIO_PULLUP_ONLY);
@@ -149,10 +147,18 @@ void transIntr(spi_slave_transaction_t * trans) {
     value = ((char*)driver->rx_buffer)[i];
     Serial.print(value, HEX);
     Serial.print(',');
+        uint8_t hexidx;
+    //Store hex values as a concatenated string
+    if (i%2 == 0) hexidx = payload[i] >> 4;
+    else hexidx = payload[i] & 0xF;
+    hexstringbuff[i] = hexstring[hexidx];
   }
   Serial.println(" --- " + (String)largo);
   //
-  client.publish(topic, "FIXME");
+  
+  client.publish(topic, hexstringbuff);
+  clrhexstringbuff();
+  
   //Set it to listen again into Master SPI
   driver->length = t_size * 8;
   driver->trans_len = 0;
