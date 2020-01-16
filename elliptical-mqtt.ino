@@ -9,6 +9,7 @@
 const char hexstring[] = "0123456789ABCDEF";
 #define HEXBUFLEN 41
 char hexstringbuff[HEXBUFLEN];
+uint8_t sendmsgflag;
 
 // give it a name:
 int led = 2;
@@ -78,6 +79,7 @@ void setup()
   pinMode(0, INPUT);
 
   clrhexstringbuff();
+  sendmsgflag = 0;
 
   SPI.begin();
   gpio_set_pull_mode((gpio_num_t)SCLK, GPIO_PULLUP_ONLY);
@@ -147,17 +149,15 @@ void transIntr(spi_slave_transaction_t * trans) {
     value = ((char*)driver->rx_buffer)[i];
     Serial.print(value, HEX);
     Serial.print(',');
-        uint8_t hexidx;
+    
     //Store hex values as a concatenated string
-    if (i%2 == 0) hexidx = payload[i] >> 4;
-    else hexidx = payload[i] & 0xF;
-    hexstringbuff[i] = hexstring[hexidx];
+    hexstringbuff[2*i] = hexstring[value >> 4];
+    hexstringbuff[(2*i)+1] = hexstring[value & 0xF];
   }
   Serial.println(" --- " + (String)largo);
   //
-  
-  client.publish(topic, hexstringbuff);
-  clrhexstringbuff();
+  ++sendmsgflag;
+
   
   //Set it to listen again into Master SPI
   driver->length = t_size * 8;
@@ -179,7 +179,14 @@ void loop() {
     while (digitalRead(0)==0) ;;
   }
   //digitalWrite(led,0);
-  delay(50);
+  //delay(50);
+
+  if (sendmsgflag) {
+    sendmsgflag = 0;
+    Serial.print(hexstringbuff);
+    client.publish(topic, hexstringbuff);
+    clrhexstringbuff();
+  }
   /*
   digitalWrite(led, HIGH);   // turn the LED on (HIGH is the voltage level)
   delay(1000);               // wait for a second
