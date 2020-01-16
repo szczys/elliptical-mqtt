@@ -9,6 +9,7 @@
 const char hexstring[] = "0123456789ABCDEF";
 #define HEXBUFLEN 41
 char hexstringbuff[HEXBUFLEN];
+char lasthex[HEXBUFLEN];
 uint8_t sendmsgflag;
 
 // give it a name:
@@ -43,8 +44,20 @@ char last[4] = "Off";
 WiFiClient espClient;
 PubSubClient client(espClient);
 
-void clrhexstringbuff() {
-  for (uint8_t i=0; i<HEXBUFLEN; i++) hexstringbuff[i] = 0;
+void clrhexbuff(char buff[]) {
+  for (uint8_t i=0; i<HEXBUFLEN; i++) buff[i] = 0;
+}
+
+uint8_t samebuff(char buff_1[], char buff_2[]) {
+  for (uint8_t i=0; i<HEXBUFLEN; i++) {
+    if (buff_1[i] != buff_2[i]) return 0;
+    if (buff_1[i] == 0) return 1;
+  }
+  return 1;
+}
+
+void copybuff(char from_buff[], char to_buff[]) {
+  for (uint8_t i=0; i<HEXBUFLEN; i++) { to_buff[i] = from_buff[i]; }
 }
 
 void setup()
@@ -78,7 +91,8 @@ void setup()
   pinMode(led, OUTPUT);
   pinMode(0, INPUT);
 
-  clrhexstringbuff();
+  clrhexbuff(hexstringbuff);
+  clrhexbuff(lasthex);
   sendmsgflag = 0;
 
   SPI.begin();
@@ -143,18 +157,18 @@ void transIntr(spi_slave_transaction_t * trans) {
   byte value = 0; 
   uint16_t largo = driver->trans_len;
   largo = largo / 8; //this value is in bits
-  Serial.println("INCOMING: ");
+  //Serial.println("INCOMING: ");
   for (int i = 0; i<largo; i++)
   {
     value = ((char*)driver->rx_buffer)[i];
-    Serial.print(value, HEX);
-    Serial.print(',');
+    //Serial.print(value, HEX);
+    //Serial.print(',');
     
     //Store hex values as a concatenated string
     hexstringbuff[2*i] = hexstring[value >> 4];
     hexstringbuff[(2*i)+1] = hexstring[value & 0xF];
   }
-  Serial.println(" --- " + (String)largo);
+  //Serial.println(" --- " + (String)largo);
   //
   ++sendmsgflag;
 
@@ -178,19 +192,14 @@ void loop() {
     
     while (digitalRead(0)==0) ;;
   }
-  //digitalWrite(led,0);
-  //delay(50);
 
   if (sendmsgflag) {
     sendmsgflag = 0;
-    Serial.print(hexstringbuff);
-    client.publish(topic, hexstringbuff);
-    clrhexstringbuff();
+    if (samebuff(hexstringbuff,lasthex) == 0) {
+      Serial.print(hexstringbuff);
+      client.publish(topic, hexstringbuff);
+      copybuff(hexstringbuff, lasthex);
+      clrhexbuff(hexstringbuff);
+    }
   }
-  /*
-  digitalWrite(led, HIGH);   // turn the LED on (HIGH is the voltage level)
-  delay(1000);               // wait for a second
-  digitalWrite(led, LOW);    // turn the LED off by making the voltage LOW
-  delay(1000);               // wait for a second
-  */
 }
