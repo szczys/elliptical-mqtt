@@ -196,7 +196,7 @@ void loop() {
   if (sendmsgflag) {
     sendmsgflag = 0;
     if (samebuff(hexstringbuff,lasthex) == 0) {
-      Serial.print(hexstringbuff);
+      Serial.println(hexstringbuff);
       client.publish(topic, hexstringbuff);
       copybuff(hexstringbuff, lasthex);
       clrhexbuff(hexstringbuff);
