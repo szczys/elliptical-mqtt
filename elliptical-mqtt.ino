@@ -31,8 +31,12 @@ const char* topic = "exercise/elliptical";
 #define SCLK  14
 #define SS    15
 
-spi_slave_transaction_t * driver;
-uint16_t t_size = 20;
+#define BYTEARRAYLEN  16
+volatile uint16_t bitcount;
+volatile uint8_t bytearray[BYTEARRAYLEN];
+volatile uint8_t messageFlag;
+volatile uint8_t curbyte;
+volatile uint8_t bytefiller;
 
 const char* mqtt_server = "192.168.1.135";
 
@@ -86,6 +90,15 @@ void setup()
 
   client.setServer(mqtt_server, 1883);
   client.setCallback(callback);
+
+  messageFlag = 0;
+  clearByteArray();
+  curbyte = 0;
+  bytefiller = 0;
+
+  pinMode(SS, INPUT);
+  pinMode(SCLK, INPUT);
+  pinMode(SI, INPUT);
                 
   // initialize the digital pin as an output.
   pinMode(led, OUTPUT);
@@ -95,21 +108,9 @@ void setup()
   clrhexbuff(lasthex);
   sendmsgflag = 0;
 
-  SPI.begin();
-  gpio_set_pull_mode((gpio_num_t)SCLK, GPIO_PULLUP_ONLY);
-  gpio_set_pull_mode((gpio_num_t)SS, GPIO_PULLUP_ONLY);
-  //Driver acts as buffer for incoming spi data, last null is optional, may be used to flag each transaction with your own data / variable.
-  driver = new spi_slave_transaction_t{ (size_t)(t_size * 8) ,  0 , heap_caps_malloc(_max(t_size,32), MALLOC_CAP_DMA), heap_caps_malloc(_max(t_size,32), MALLOC_CAP_DMA),NULL };
-  spi_bus_config_t buscfg = {
-    buscfg.mosi_io_num = SI,
-    buscfg.miso_io_num = SO,
-    buscfg.sclk_io_num = SCLK
-  };
-  spi_slave_interface_config_t slvcfg = { SS,0,1,0,setupIntr,transIntr };//check the IDF for further explanation
-  spi_slave_initialize(HSPI_HOST, &buscfg, &slvcfg, 1); //DMA channel 1
-  spi_slave_queue_trans(HSPI_HOST, driver, portMAX_DELAY);//ready for input (no transmit)
-  //exter_intr = ext;   
-  SPI.beginTransaction(SPISettings(10000000, MSBFIRST, SPI_MODE1));
+  //Falling SS enables falling clock interrupt
+  //Rising SS disabled falling clock and flags serial output
+  attachInterrupt(digitalPinToInterrupt(SS), changeSS, CHANGE);
 }
 
 void callback(char* topic, byte* payload, unsigned int length) {
@@ -147,36 +148,17 @@ void reconnect() {
   }
 }
 
-//Callback called after the SPI registers are loaded with new data.
-void setupIntr(spi_slave_transaction_t * trans) {
-  //I do not use this...
-}
-
-//Callback called after a transaction is done.
-void transIntr(spi_slave_transaction_t * trans) {
+//Copy buffered message to hex values
+void msgtohex() {
   byte value = 0; 
-  uint16_t largo = driver->trans_len;
-  largo = largo / 8; //this value is in bits
-  //Serial.println("INCOMING: ");
-  for (int i = 0; i<largo; i++)
+  for (int i = 0; i<BYTEARRAYLEN; i++)
   {
-    value = ((char*)driver->rx_buffer)[i];
-    //Serial.print(value, HEX);
-    //Serial.print(',');
+    value = bytearray[i];
     
     //Store hex values as a concatenated string
     hexstringbuff[2*i] = hexstring[value >> 4];
     hexstringbuff[(2*i)+1] = hexstring[value & 0xF];
   }
-  //Serial.println(" --- " + (String)largo);
-  //
-  ++sendmsgflag;
-
-  
-  //Set it to listen again into Master SPI
-  driver->length = t_size * 8;
-  driver->trans_len = 0;
-  spi_slave_queue_trans(HSPI_HOST, driver, portMAX_DELAY);
 }
 
 // the loop routine runs over and over again forever:
@@ -193,13 +175,54 @@ void loop() {
     while (digitalRead(0)==0) ;;
   }
 
-  if (sendmsgflag) {
-    sendmsgflag = 0;
+  if (messageFlag) {
+    msgtohex(); //Loads hexstringbuff from bytearray
     if (samebuff(hexstringbuff,lasthex) == 0) {
       Serial.println(hexstringbuff);
       client.publish(topic, hexstringbuff);
       copybuff(hexstringbuff, lasthex);
       clrhexbuff(hexstringbuff);
     }
+    messageFlag = 0;  //Throw out messages that came in while we were operating
+  }
+}
+
+void clearByteArray(void) {
+  for (uint8_t i=0; i<BYTEARRAYLEN; i++) {
+    bytearray[i] = 0;
+  }
+}
+void changeSS(void) {
+  if(digitalRead(SS)) {
+    //Rising Edge
+    //Serial.println("Rising Edge!");
+    //Packet is done, stop listening to clock and flag for a completed message
+    detachInterrupt(digitalPinToInterrupt(SCLK));
+    //Shift in the remaining bits to the nearest byte
+    if (bitcount) {
+      bytearray[bytefiller] = (curbyte << (8-bitcount));   
+    }
+
+    //Tell main to print the message
+    messageFlag = 1;
+  }
+  else {
+    //Serial.println("Falling Edge!");
+    //Falling Edge
+    //Listen for falling clock and keep track of bit count
+    if (messageFlag == 0) {
+      //Only receive packet if we know the buffer is empty
+      bitcount = 0;
+      bytefiller = 0;
+      attachInterrupt(digitalPinToInterrupt(SCLK), fallingSCLK, FALLING);
+    }
+  }
+}
+
+void fallingSCLK(void) {
+  curbyte = (curbyte << 1) + digitalRead(SI);
+  if (++bitcount > 7) {
+    bitcount = 0;
+    bytearray[bytefiller++] = curbyte;
   }
 }
