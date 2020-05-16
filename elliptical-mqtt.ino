@@ -31,6 +31,8 @@ const char* topic = "exercise/elliptical";
 #define SCLK  14
 #define SS    15
 
+portMUX_TYPE mux = portMUX_INITIALIZER_UNLOCKED;
+
 #define BYTEARRAYLEN  16
 volatile uint16_t bitcount;
 volatile uint8_t bytearray[BYTEARRAYLEN];
@@ -96,9 +98,10 @@ void setup()
   curbyte = 0;
   bytefiller = 0;
 
-  pinMode(SS, INPUT);
-  pinMode(SCLK, INPUT);
-  pinMode(SI, INPUT);
+  pinMode(SS, INPUT_PULLUP);
+  pinMode(SCLK, INPUT_PULLUP);
+  pinMode(SI, INPUT_PULLUP);
+  pinMode(2, OUTPUT);
                 
   // initialize the digital pin as an output.
   pinMode(led, OUTPUT);
@@ -192,6 +195,20 @@ void clearByteArray(void) {
     bytearray[i] = 0;
   }
 }
+
+void IRAM_ATTR fallingSCLK(void) {
+  portENTER_CRITICAL(&mux);
+  //digitalWrite(2,HIGH);
+  gpio_set_level(GPIO_NUM_2, 1);
+  curbyte = (curbyte << 1) + gpio_get_level(GPIO_NUM_13);
+  if (++bitcount > 7) {
+    bitcount = 0;
+    bytearray[bytefiller++] = curbyte;
+  }
+  gpio_set_level(GPIO_NUM_2, 0);
+  portEXIT_CRITICAL(&mux);
+}
+
 void changeSS(void) {
   if(digitalRead(SS)) {
     //Rising Edge
@@ -216,13 +233,5 @@ void changeSS(void) {
       bytefiller = 0;
       attachInterrupt(digitalPinToInterrupt(SCLK), fallingSCLK, FALLING);
     }
-  }
-}
-
-void fallingSCLK(void) {
-  curbyte = (curbyte << 1) + digitalRead(SI);
-  if (++bitcount > 7) {
-    bitcount = 0;
-    bytearray[bytefiller++] = curbyte;
   }
 }
