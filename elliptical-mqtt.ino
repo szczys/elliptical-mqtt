@@ -196,17 +196,14 @@ void clearByteArray(void) {
   }
 }
 
-void IRAM_ATTR fallingSCLK(void) {
-  portENTER_CRITICAL(&mux);
-  //digitalWrite(2,HIGH);
-  gpio_set_level(GPIO_NUM_2, 1);
-  curbyte = (curbyte << 1) + gpio_get_level(GPIO_NUM_13);
+void ICACHE_RAM_ATTR fallingSCLK(void) {
+  GPIO.out_w1ts = (1 << GPIO_NUM_2);
+  curbyte = (curbyte << 1) + ((GPIO_REG_READ(GPIO_IN_REG)&(BIT(GPIO_NUM_13)))!=0);
   if (++bitcount > 7) {
     bitcount = 0;
     bytearray[bytefiller++] = curbyte;
   }
-  gpio_set_level(GPIO_NUM_2, 0);
-  portEXIT_CRITICAL(&mux);
+  GPIO.out_w1tc = (1 << GPIO_NUM_2);
 }
 
 void changeSS(void) {
@@ -231,7 +228,7 @@ void changeSS(void) {
       //Only receive packet if we know the buffer is empty
       bitcount = 0;
       bytefiller = 0;
-      attachInterrupt(digitalPinToInterrupt(SCLK), fallingSCLK, FALLING);
+      attachInterrupt(digitalPinToInterrupt(SCLK), fallingSCLK, RISING);
     }
   }
 }
