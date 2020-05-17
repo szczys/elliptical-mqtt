@@ -1,0 +1,509 @@
+[
+    {
+        "id": "d4e1e618.06ed38",
+        "type": "tab",
+        "label": "Exercise MQTT",
+        "disabled": false,
+        "info": ""
+    },
+    {
+        "id": "e07642fb.805d8",
+        "type": "mqtt in",
+        "z": "d4e1e618.06ed38",
+        "name": "",
+        "topic": "exercise/elliptical",
+        "qos": "2",
+        "datatype": "auto",
+        "broker": "51236801.56dee8",
+        "x": 120,
+        "y": 360,
+        "wires": [
+            [
+                "96ba715f.48234",
+                "1f42d902.abacf7",
+                "80739c0d.74baf"
+            ]
+        ]
+    },
+    {
+        "id": "96ba715f.48234",
+        "type": "debug",
+        "z": "d4e1e618.06ed38",
+        "name": "",
+        "active": true,
+        "tosidebar": true,
+        "console": false,
+        "tostatus": false,
+        "complete": "false",
+        "x": 430,
+        "y": 360,
+        "wires": []
+    },
+    {
+        "id": "1f42d902.abacf7",
+        "type": "file",
+        "z": "d4e1e618.06ed38",
+        "name": "",
+        "filename": "/home/mike/Documents/elliptical-debug.txt",
+        "appendNewline": true,
+        "createDir": false,
+        "overwriteFile": "false",
+        "encoding": "none",
+        "x": 520,
+        "y": 400,
+        "wires": [
+            []
+        ]
+    },
+    {
+        "id": "8a1be475.4d6d9",
+        "type": "inject",
+        "z": "d4e1e618.06ed38",
+        "name": "",
+        "topic": "",
+        "payload": "A0000000069FAFEFA84007A920000000",
+        "payloadType": "str",
+        "repeat": "",
+        "crontab": "",
+        "once": false,
+        "onceDelay": 0.1,
+        "x": 90,
+        "y": 40,
+        "wires": [
+            [
+                "2ef4338b.21fe8c"
+            ]
+        ]
+    },
+    {
+        "id": "2ef4338b.21fe8c",
+        "type": "mqtt out",
+        "z": "d4e1e618.06ed38",
+        "name": "",
+        "topic": "exercise/elliptical",
+        "qos": "",
+        "retain": "",
+        "broker": "51236801.56dee8",
+        "x": 530,
+        "y": 40,
+        "wires": []
+    },
+    {
+        "id": "a23885a4.e54",
+        "type": "inject",
+        "z": "d4e1e618.06ed38",
+        "name": "",
+        "topic": "",
+        "payload": "A000000000000000284029390040007E",
+        "payloadType": "str",
+        "repeat": "",
+        "crontab": "",
+        "once": false,
+        "onceDelay": 0.1,
+        "x": 90,
+        "y": 80,
+        "wires": [
+            [
+                "2ef4338b.21fe8c"
+            ]
+        ]
+    },
+    {
+        "id": "db8c096.c1ebaf8",
+        "type": "inject",
+        "z": "d4e1e618.06ed38",
+        "name": "",
+        "topic": "",
+        "payload": "A0007F02C00000000045B4B92007E000",
+        "payloadType": "str",
+        "repeat": "",
+        "crontab": "",
+        "once": false,
+        "onceDelay": 0.1,
+        "x": 90,
+        "y": 120,
+        "wires": [
+            [
+                "2ef4338b.21fe8c"
+            ]
+        ]
+    },
+    {
+        "id": "76d9d07b.cfff08",
+        "type": "inject",
+        "z": "d4e1e618.06ed38",
+        "name": "",
+        "topic": "",
+        "payload": "A0000000002DBED82847B7B1A007F87E",
+        "payloadType": "str",
+        "repeat": "",
+        "crontab": "",
+        "once": false,
+        "onceDelay": 0.1,
+        "x": 90,
+        "y": 160,
+        "wires": [
+            [
+                "2ef4338b.21fe8c"
+            ]
+        ]
+    },
+    {
+        "id": "80739c0d.74baf",
+        "type": "function",
+        "z": "d4e1e618.06ed38",
+        "name": "Control panel decoder",
+        "func": "if ((msg.payload.slice(0,2) == \"A0\") && (msg.payload.length == 32)) {\n    //node.warn(\"Valid message\");\n}\nelse {\n    node.warn(\"Invalid message\")\n    return;\n}\n\nvar hexvalues = [];\nfor (var i=0; i<msg.payload.length; i += 2) {\n    hexvalues.push(parseInt(msg.payload.slice(i,i+2),16))\n}\n\nvar returnCharacter = function(byteH, byteL){\n    var bitMaskH = parseInt('0x07',16);\n    var bitMaskL = parseInt('0xB8',16);\n    \n    var filteredH = byteH & bitMaskH;\n    var filteredL = byteL & bitMaskL;\n    \n    var returnchar = '?';\n    \n    var lookupValue = [filteredH,filteredL];\n\n    var lookupTable = {};\n    lookupTable[[7,168]] ='0';    //0x07 0xA8\n    lookupTable[[0,40]] = '1';     //0x00 0x28\n    lookupTable[[6,152]] = '2';    //0x06 0x98\n    lookupTable[[4,184]] = '3';    //0x04 0xB8\n    lookupTable[[1,56]] = '4';     //0x01 0x38\n    lookupTable[[5,176]] = '5';    //0x05 0xB0\n    lookupTable[[7,176]] = '6';    //0x07 0xB0\n    lookupTable[[0,168]] = '7';    //0x00 0xA8\n    lookupTable[[7,184]] = '8';    //0x07 0xB8\n    lookupTable[[5,184]] = '9';    //0x05 0xB8\n    lookupTable[[3,152]] = 'P';    //0x03 0x98\n    lookupTable[[0,16]] = '-';     //0x00 0x10  used when reading pulse\n    lookupTable[[0,0]] = ' ';      //0x00 0x00\n    \n    if (lookupValue in lookupTable) {\n        return lookupTable[lookupValue];\n    }\n    else return '?';\n};\n\nvar nibbleShifter = function(byteH, byteL){\n    //returns tuple of bytes with nibbles shifted left by 1\n    shiftedH = byteH>>4;\n    shiftedL = ((byteH & 0x0F)<<4) | (byteL>>4);\n    return [shiftedH,shiftedL];\n};\n\nvar countOnes = function(inByte) {\n    var count = 0;\n    for (var i=0; i<8; i++) {\n        if (inByte & 1<<i) count += 1;\n    }\n    return count\n};\n\nvar decodeSpeedBar = function(byte1, byte2, byte3, byte4) {\n    //inList must have 4 bytes\n\n    //count the number of segments that are lit for each speed bar\n    var actual = 0\n    var goal = 0\n\n    actual += countOnes(byte1 & parseInt('0x07',16));\n    actual += countOnes(byte2);\n    actual += countOnes(byte3 & parseInt('0x80',16));\n    goal += countOnes(byte3 & parseInt('0x7F',16));\n    goal += countOnes(byte4 & parseInt('0xF8',16));\n\n    return [actual, goal];\n};\n\nvar colon = false;\nvar rpm = false;\nvar scan = false;\nvar timeDisp = false;\nvar distDisp = false;\nvar calories = false;\nvar calDP = false;\nvar pulse = false;\nvar heart = false;\nvar paceUp = false;\nvar paceDn = false;\n\nif (hexvalues[4] & parseInt('0x40',16)) calories = true;      //Preload calories\nif (hexvalues[2] & parseInt('0x04',16)) calDP = true;            //Preload calories decimal point\nif (hexvalues[4] & parseInt('0x10',16)) pulse = true;         //Preload pulse\nif (hexvalues[3] & parseInt('0x04',16)) heart = true;           //Preload heart icon\nif (hexvalues[5] & parseInt('0x40',16)) scan = true;          //Preload scan\nif (hexvalues[12] & parseInt('0x20',16)) timeDisp = true;    //Preload time\nif (hexvalues[12] & parseInt('0x40',16)) distDisp = true;    //Preload dist\nif (hexvalues[7] & parseInt('0x40',16)) colon = true;            //Preload colon\nif (hexvalues[9] & parseInt('0x40',16)) rpm = true;           //Preload rpm\nif (hexvalues[13] & parseInt('0x40')) paceUp = true;                        //up indicator\nif (hexvalues[12] & parseInt('0x80')) paceDn = true;                        //down indicator\n\n\n//These three digits are nibble shifted left compared to all others\n//This intermediary step fixes that for prinout purposes\nvar pulseH = nibbleShifter(hexvalues[1],hexvalues[2]);\nvar pulseT = nibbleShifter(hexvalues[2],hexvalues[3]);\nvar pulseO = nibbleShifter(hexvalues[3],hexvalues[4]);\n\nvar pulseHund = returnCharacter(pulseH[0], pulseH[1]);\nvar pulseTens = returnCharacter(pulseT[0], pulseT[1]);\nvar pulseOnes = returnCharacter(pulseO[0], pulseO[1]);\nvar mainThou = returnCharacter(hexvalues[4],hexvalues[5]);\nvar mainHund = returnCharacter(hexvalues[5],hexvalues[6]);\nvar mainTens = returnCharacter(hexvalues[6],hexvalues[7]);\nvar mainOnes = returnCharacter(hexvalues[7],hexvalues[8]);\nvar rpmHund = returnCharacter(hexvalues[8],hexvalues[9]);\nvar rpmTens = returnCharacter(hexvalues[9],hexvalues[10]);\nvar rpmOnes = returnCharacter(hexvalues[10],hexvalues[11]);\n\nvar speedBar = decodeSpeedBar(hexvalues[13],hexvalues[14],hexvalues[15],'0x00');\n\nvar ellipticalData = {\n\t\"colon\": colon,\n\t\"rpm\": rpm,\n\t\"scan\": scan,\n\t\"timeDisp\": timeDisp,\n\t\"distDisp\": distDisp,\n\t\"calories\": calories,\n\t\"calDP\": calDP,\n\t\"pulse\": pulse,\n\t\"heart\": heart,\n\t\"paceUp\": paceUp,\n\t\"paceDn\": paceDn,\n\t\"mainThou\": mainThou,\n\t\"mainHund\": mainHund,\n\t\"mainTens\": mainTens,\n\t\"mainOnes\": mainOnes,\n\t\"pulseHund\": pulseHund,\n\t\"pulseTens\": pulseTens,\n\t\"pulseOnes\": pulseOnes,\n\t\"rpmHund\": rpmHund,\n\t\"rpmTens\": rpmTens,\n\t\"rpmOnes\": rpmOnes,\n\t\"actualPace\": speedBar[0],\n\t\"targetPace\": speedBar[1]\n}\nnode.warn(ellipticalData);\n        \nmsg.payload = ellipticalData;\nreturn msg;",
+        "outputs": 1,
+        "noerr": 0,
+        "x": 460,
+        "y": 440,
+        "wires": [
+            [
+                "c88c6742.371248",
+                "97053533.893098",
+                "49aa5143.958ba",
+                "230c0040.a575b",
+                "52e2e943.db5538",
+                "3639086.b8b7478",
+                "45ca363b.dfea28",
+                "41528a05.8d7ffc"
+            ]
+        ]
+    },
+    {
+        "id": "c88c6742.371248",
+        "type": "ui_text",
+        "z": "d4e1e618.06ed38",
+        "group": "40fa3226.7883bc",
+        "order": 1,
+        "width": "6",
+        "height": "3",
+        "name": "Time",
+        "label": "<font size=\"+2\">{{((msg.payload.timeDisp) ? 'Time' : '')}}{{((msg.payload.distDisp) ? 'Distance' : '')}}</font>",
+        "format": "<font size=\"+18\">{{msg.payload.mainThou}}{{msg.payload.mainHund}}{{((msg.payload.colon) ? ':' : '')}}{{msg.payload.mainTens}}{{msg.payload.mainOnes}}</font>",
+        "layout": "col-center",
+        "x": 830,
+        "y": 460,
+        "wires": []
+    },
+    {
+        "id": "97053533.893098",
+        "type": "ui_text",
+        "z": "d4e1e618.06ed38",
+        "group": "40fa3226.7883bc",
+        "order": 5,
+        "width": "2",
+        "height": "2",
+        "name": "Pulse",
+        "label": "{{((msg.payload.calories) ? \"Calories\" : ((msg.payload.pulse) ? \"Pulse\" : ' '))}}",
+        "format": "<font size=\"+3\">{{msg.payload.pulseHund+msg.payload.pulseTens+((msg.payload.calDP) ? '.' : '')+msg.payload.pulseOnes}}</font>",
+        "layout": "col-center",
+        "x": 830,
+        "y": 540,
+        "wires": []
+    },
+    {
+        "id": "49aa5143.958ba",
+        "type": "ui_text",
+        "z": "d4e1e618.06ed38",
+        "group": "40fa3226.7883bc",
+        "order": 2,
+        "width": "2",
+        "height": "2",
+        "name": "RPM",
+        "label": "RPM",
+        "format": "<font size=+3>{{msg.payload.rpmHund}}{{msg.payload.rpmTens}}{{msg.payload.rpmOnes}}</font>",
+        "layout": "col-center",
+        "x": 830,
+        "y": 620,
+        "wires": []
+    },
+    {
+        "id": "65a2cf95.0f8ee8",
+        "type": "comment",
+        "z": "d4e1e618.06ed38",
+        "name": "These are just for testing",
+        "info": "",
+        "x": 430,
+        "y": 120,
+        "wires": []
+    },
+    {
+        "id": "452ac125.720628",
+        "type": "ui_chart",
+        "z": "d4e1e618.06ed38",
+        "name": "",
+        "group": "40fa3226.7883bc",
+        "order": 4,
+        "width": "3",
+        "height": "8",
+        "label": "Pace",
+        "chartType": "bar",
+        "legend": "false",
+        "xformat": "HH:mm:ss",
+        "interpolate": "linear",
+        "nodata": "",
+        "dot": false,
+        "ymin": "0",
+        "ymax": "12",
+        "removeOlder": 1,
+        "removeOlderPoints": "",
+        "removeOlderUnit": "3600",
+        "cutout": 0,
+        "useOneColor": false,
+        "colors": [
+            "#2ca02c",
+            "#1f77b4",
+            "#ff7f0e",
+            "#2ca02c",
+            "#98df8a",
+            "#d62728",
+            "#ff9896",
+            "#9467bd",
+            "#c5b0d5"
+        ],
+        "useOldStyle": false,
+        "outputs": 1,
+        "x": 830,
+        "y": 760,
+        "wires": [
+            []
+        ]
+    },
+    {
+        "id": "230c0040.a575b",
+        "type": "function",
+        "z": "d4e1e618.06ed38",
+        "name": "Bar Chart Format",
+        "func": "msg.payload = [{\n    \"series\": [ \"X\" ],\n    \"data\": [ [msg.payload.actualPace, msg.payload.targetPace] ],\n    \"labels\": [ \"Actual\", \"Target\" ]\n}]\nreturn msg;",
+        "outputs": 1,
+        "noerr": 0,
+        "x": 510,
+        "y": 760,
+        "wires": [
+            [
+                "452ac125.720628"
+            ]
+        ]
+    },
+    {
+        "id": "52e2e943.db5538",
+        "type": "ui_text",
+        "z": "d4e1e618.06ed38",
+        "group": "40fa3226.7883bc",
+        "order": 7,
+        "width": "3",
+        "height": "2",
+        "name": "",
+        "label": "Display Mode",
+        "format": "<font size=\"+3\">{{((msg.payload.scan) ? 'Scan' : ((msg.payload.timeDisp) ? 'Time' : ((msg.payload.distDisp) ? 'Distance' : '')))}}</font>",
+        "layout": "col-center",
+        "x": 860,
+        "y": 500,
+        "wires": []
+    },
+    {
+        "id": "2741c4a8.64dda4",
+        "type": "inject",
+        "z": "d4e1e618.06ed38",
+        "name": "",
+        "topic": "",
+        "payload": "A0007EFAC0400007A84007A940000000",
+        "payloadType": "str",
+        "repeat": "",
+        "crontab": "",
+        "once": false,
+        "onceDelay": 0.1,
+        "x": 90,
+        "y": 200,
+        "wires": [
+            [
+                "2ef4338b.21fe8c"
+            ]
+        ]
+    },
+    {
+        "id": "3639086.b8b7478",
+        "type": "ui_template",
+        "z": "d4e1e618.06ed38",
+        "group": "40fa3226.7883bc",
+        "name": "Heartbeat",
+        "order": 6,
+        "width": "1",
+        "height": "1",
+        "format": "<div layout=\"row\" layout-align=\"start center\" ng-if=\"msg.payload.heart\">\n  <img src=\"/heart.png\" />\n</div>",
+        "storeOutMessages": true,
+        "fwdInMessages": true,
+        "templateScope": "local",
+        "x": 980,
+        "y": 540,
+        "wires": [
+            []
+        ]
+    },
+    {
+        "id": "428e58af.12aab",
+        "type": "inject",
+        "z": "d4e1e618.06ed38",
+        "name": "",
+        "topic": "",
+        "payload": "A002FB139006986FB045B5B12007E07E",
+        "payloadType": "str",
+        "repeat": "",
+        "crontab": "",
+        "once": false,
+        "onceDelay": 0.1,
+        "x": 90,
+        "y": 520,
+        "wires": [
+            [
+                "80739c0d.74baf"
+            ]
+        ]
+    },
+    {
+        "id": "45ca363b.dfea28",
+        "type": "ui_template",
+        "z": "d4e1e618.06ed38",
+        "group": "40fa3226.7883bc",
+        "name": "Pace coach",
+        "order": 3,
+        "width": "1",
+        "height": "2",
+        "format": "<div layout=\"row\" layout-align=\"start center\">\n  <img ng-if=\"msg.payload.paceUp\" style=\"margin-top:24px;\" src=\"/uparrow.png\" />\n  <img ng-if=\"msg.payload.paceDn\" style=\"margin-top:24px;\" src=\"/dnarrow.png\" />\n</div>",
+        "storeOutMessages": true,
+        "fwdInMessages": true,
+        "templateScope": "local",
+        "x": 990,
+        "y": 620,
+        "wires": [
+            []
+        ]
+    },
+    {
+        "id": "479bd31b.2c5054",
+        "type": "ui_text",
+        "z": "d4e1e618.06ed38",
+        "group": "40fa3226.7883bc",
+        "order": 9,
+        "width": "2",
+        "height": "1",
+        "name": "",
+        "label": "Routine",
+        "format": "{{msg.payload.routine}}",
+        "layout": "col-center",
+        "x": 840,
+        "y": 680,
+        "wires": []
+    },
+    {
+        "id": "4502048e.cafc74",
+        "type": "ui_text",
+        "z": "d4e1e618.06ed38",
+        "group": "40fa3226.7883bc",
+        "order": 8,
+        "width": "2",
+        "height": "1",
+        "name": "",
+        "label": "Resistance",
+        "format": "{{msg.payload.resistance}}",
+        "layout": "col-center",
+        "x": 850,
+        "y": 720,
+        "wires": []
+    },
+    {
+        "id": "41528a05.8d7ffc",
+        "type": "function",
+        "z": "d4e1e618.06ed38",
+        "name": "Routine and Resistance",
+        "func": "var state = msg.payload\n//Get string of digits without spaces\nvar digitstring = (state.mainThou+state.mainHund+state.mainTens+state.mainOnes).replace(/\\s+/g,'')\n\nif ((state.timeDisp === false) && (state.distDisp === false)) {\n    if (digitstring[0] == \"P\") {\n        global.set(\"routine_glob\",digitstring);\n    }\n    else if (digitstring !== \"\") {\n        global.set(\"resistance_glob\",digitstring);\n    }\n}\n\nvar outObj = {}\noutObj[\"resistance\"] = global.get(\"resistance_glob\");\noutObj[\"routine\"] = global.get(\"routine_glob\");\nnode.warn(outObj);\nmsg.payload = outObj;\nreturn msg;",
+        "outputs": 1,
+        "noerr": 0,
+        "x": 490,
+        "y": 720,
+        "wires": [
+            [
+                "4502048e.cafc74",
+                "479bd31b.2c5054"
+            ]
+        ]
+    },
+    {
+        "id": "3a2c14b5.655b5c",
+        "type": "inject",
+        "z": "d4e1e618.06ed38",
+        "name": "Check globals at startup",
+        "topic": "",
+        "payload": "",
+        "payloadType": "date",
+        "repeat": "",
+        "crontab": "",
+        "once": true,
+        "onceDelay": 0.1,
+        "x": 150,
+        "y": 300,
+        "wires": [
+            [
+                "63455e7f.831f38"
+            ]
+        ]
+    },
+    {
+        "id": "63455e7f.831f38",
+        "type": "function",
+        "z": "d4e1e618.06ed38",
+        "name": "Initialize Global variables",
+        "func": "if (global.get(\"resistance_glob\")===undefined){\n    global.set(\"resistance_glob\", \" \");\n}\nif (global.get(\"routine_glob\")===undefined){\n    global.set(\"routine_glob\", \" \");\n}\nreturn msg;",
+        "outputs": 1,
+        "noerr": 0,
+        "x": 470,
+        "y": 300,
+        "wires": [
+            []
+        ]
+    },
+    {
+        "id": "51236801.56dee8",
+        "type": "mqtt-broker",
+        "z": "",
+        "name": "",
+        "broker": "192.168.1.135",
+        "port": "1883",
+        "clientid": "nelson",
+        "usetls": false,
+        "compatmode": false,
+        "keepalive": "60",
+        "cleansession": true,
+        "birthTopic": "",
+        "birthQos": "0",
+        "birthPayload": "",
+        "closeTopic": "",
+        "closeQos": "0",
+        "closePayload": "",
+        "willTopic": "",
+        "willQos": "0",
+        "willPayload": ""
+    },
+    {
+        "id": "40fa3226.7883bc",
+        "type": "ui_group",
+        "z": "",
+        "name": "Default",
+        "tab": "3cbab9df.1c1836",
+        "disp": false,
+        "width": "6",
+        "collapse": false
+    },
+    {
+        "id": "3cbab9df.1c1836",
+        "type": "ui_tab",
+        "z": "",
+        "name": "Exercise Dashboard",
+        "icon": "dashboard",
+        "order": 1,
+        "disabled": false,
+        "hidden": false
+    }
+]
